@@ -1,6 +1,9 @@
 ifeq ($(call my-dir)/$(TARGET_BOARD_PLATFORM),$(call project-path-for,qcom-display))
 
 # TODO:  Find a better way to separate build configs for ADP vs non-ADP devices
+ifneq ($(filter rhine shinano kanuti kitakami loire,$(PRODUCT_PLATFORM)),)
+include $(call all-named-subdir-makefiles,msm8994)
+else
 ifneq ($(TARGET_BOARD_AUTO),true)
   ifneq ($(filter msm8084 msm8x84,$(TARGET_BOARD_PLATFORM)),)
     #This is for 8084 based platforms
@@ -35,6 +38,7 @@ ifneq ($(TARGET_BOARD_AUTO),true)
       endif
     endif
   endif
+endif
 endif
 
 endif
