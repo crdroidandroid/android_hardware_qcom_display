@@ -27,7 +27,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <inttypes.h>
 #include <string>
 #include <vector>
 
@@ -118,7 +117,7 @@ void DeviceImpl::serviceDied(uint64_t client_handle,
     ConfigInterface *intf = client->GetDeviceConfigIntf();
     intf_->UnRegisterClientContext(intf);
     client.reset();
-    ALOGW("Client id: %" PRIu64 " service died", client_handle);
+    ALOGW("Client id:%lu service died", client_handle);
     display_config_map_.erase(itr);
   }
 }
