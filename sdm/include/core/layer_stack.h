@@ -197,7 +197,7 @@ struct LayerFlags {
                                    //! will have highest priority. To be used by OEMs only.
 
 #ifdef FOD_ZPOS
-      uint32_t reserved : 26;      //!< This flag reserves the remaining 4 * 8 - (5 + 1) bits to
+      uint32_t reserved : 25;      //!< This flag reserves the remaining 4 * 8 - (6 + 1) bits to
                                    //!< avoid future ABI breakage
 
       uint32_t fod_pressed : 1;    //!< This flag shall be set internally to mark the fod pressed
