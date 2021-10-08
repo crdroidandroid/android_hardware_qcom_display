@@ -1114,7 +1114,7 @@ int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buff
 }
 
 int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
-  if (display >= HWCCallbacks::kNumDisplays) {
+  if (display >= HWCCallbacks::kNumDisplays || !hwc_display_[display]) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -1155,18 +1155,35 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 
+  // async_powermode supported for power on and off
+  bool override_mode = async_powermode_ && display_ready_.test(UINT32(display)) &&
+                       async_power_mode_triggered_;
+  HWC2::PowerMode last_power_mode = hwc_display_[display]->GetCurrentPowerMode();
 
-  bool override_mode = async_powermode_ && display_ready_.test(UINT32(display));
+  if (last_power_mode == mode) {
+    return HWC2_ERROR_NONE;
+  }
+
+  // 1. For power transition cases other than Off->On or On->Off, async power mode
+  // will not be used. Hence, set override_mode to false for them.
+  // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
+  // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
+  // in main thread path.
+  if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
+     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
+     (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
+    override_mode = false;
+  }
+
   if (!override_mode) {
     hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
     bool needs_validation = false;
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
-      if (hwc_display_[display]) {
-        needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
-                            mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
-                            active_builtin_disp_id < HWCCallbacks::kNumDisplays);
-      }
+      needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
+                          mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
+                          active_builtin_disp_id < HWCCallbacks::kNumDisplays);
+
     }
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
@@ -1942,6 +1959,13 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
     // HAL Pixel Format for output buffer
     output_format = input_parcel->readInt32();
   }
+
+  LayerBufferFormat sdm_format = HWCLayer::GetSDMFormat(output_format, 0);
+  if (sdm_format == kFormatInvalid) {
+    DLOGW("Format %d is not supported by SDM", output_format);
+    return -EINVAL;
+  }
+
   if (input_parcel->dataPosition() != input_parcel->dataSize()) {
     // Option to dump Layer Mixer output (0) or DSPP output (1)
     cwb_config.tap_point = static_cast<CwbTapPoint>(input_parcel->readInt32());
@@ -3160,7 +3184,7 @@ void HWCSession::DisplayPowerReset() {
 
   hwc2_display_t vsync_source = callbacks_.GetVsyncSource();
   // adb shell stop sets vsync source as max display
-  if (vsync_source != HWCCallbacks::kNumDisplays) {
+  if (vsync_source != HWCCallbacks::kNumDisplays && hwc_display_[vsync_source]) {
     status = hwc_display_[vsync_source]->SetVsyncEnabled(HWC2::Vsync::Enable);
     if (status != HWC2::Error::None) {
       DLOGE("Enabling vsync failed for disp: %" PRIu64 " with error = %d", vsync_source, status);
@@ -3207,13 +3231,14 @@ void HWCSession::HandleSecureSession() {
        display < HWCCallbacks::kNumRealDisplays; display++) {
     Locker::ScopeLock lock_d(locker_[display]);
     HWCDisplay *hwc_display = hwc_display_[display];
-    if (!hwc_display || hwc_display->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
+    if (!hwc_display) {
       continue;
     }
 
     bool is_active_secure_display = false;
     // The first On/Doze/DozeSuspend built-in display is taken as the secure display.
     if (!found_active_secure_display &&
+        hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN &&
         hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
       is_active_secure_display = true;
       found_active_secure_display = true;

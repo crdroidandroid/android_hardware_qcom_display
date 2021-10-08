@@ -252,6 +252,11 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
   virtual void SetCpuPerfHintLargeCompCycle() {};
+
+  virtual bool VsyncEnablePending() {
+    return false;
+  }
+
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
@@ -309,6 +314,8 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+                                      int32_t dataspace, hwc_region_t damage);
+  virtual HWC2::Error GetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual HWC2::Error SetColorMode(ColorMode mode) { return HWC2::Error::Unsupported; }
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
@@ -446,6 +453,10 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   };
   virtual HWC2::Error GetClientTargetProperty(ClientTargetProperty *out_client_target_property);
+  virtual void GetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo> *variable_config_map,
+                             int *active_config_index, uint32_t *num_configs);
+  virtual void SetConfigInfo(std::map<uint32_t, DisplayConfigVariableInfo>& variable_config_map,
+                             int active_config_index, uint32_t num_configs) {};
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -572,6 +583,10 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayValidateState validate_state_ = kNormalValidate;
   DisplayCommitState commit_state_ = kNormalCommit;
   bool revalidate_pending_ = false;
+  buffer_handle_t client_target_handle_ = 0;
+  shared_ptr<Fence> client_acquire_fence_ = nullptr;
+  int32_t client_dataspace_ = 0;
+  hwc_region_t client_damage_region_ = {};
 
  private:
   void DumpInputBuffers(void);
