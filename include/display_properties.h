@@ -134,5 +134,6 @@
 #define ENABLE_POMS_DURING_DOZE              DISPLAY_PROP("enable_poms_during_doze")
 
 #define SKIP_REFRESH_RATE_CHANGE             DISPLAY_PROP("skip_refresh_rate_change")
+#define OVERRIDE_DOZE_MODE_PROP              DISPLAY_PROP("override_doze_mode")
 
 #endif  // __DISPLAY_PROPERTIES_H__
