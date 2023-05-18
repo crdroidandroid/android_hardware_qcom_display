@@ -218,9 +218,10 @@ int HWCSession::Init() {
   async_powermode_ = (value == 1);
   DLOGI("builtin_powermode_override: %d", async_powermode_);
 
-  if (Debug::Get()->GetProperty(OVERRIDE_DOZE_MODE_PROP, &value) == kErrorNone) {
-    override_doze_mode_ = (value == 1);
-  }
+  value = 0;
+  Debug::Get()->GetProperty(OVERRIDE_DOZE_MODE_PROP, &value);
+  override_doze_mode_ = (value == 1);
+  DLOGI("override_doze_mode: %d", override_doze_mode_);
 
 
   InitSupportedDisplaySlots();
@@ -1184,7 +1185,8 @@ int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display
     return HWC2_ERROR_NONE;
   }
 
-  *out_support = hwc_session->override_doze_mode_ || hwc_session->hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
+  *out_support = (hwc_session->override_doze_mode_ ||
+                  hwc_session->hwc_display_[display]->HasSmartPanelConfig()) ? 1 : 0;
 
   return HWC2_ERROR_NONE;
 }
