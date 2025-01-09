@@ -76,6 +76,39 @@ cc_library_shared {
     ],
 }
 
+//gralloc.qcom
+cc_library_shared {
+    name: "gralloc.qcom",
+    defaults: ["qtidisplay_defaults"],
+    vendor: true,
+    relative_install_path: "hw",
+    header_libs: [
+        "display_headers",
+        "qti_kernel_headers",
+    ],
+    include_dirs: [
+        "system/memory/libion/include",
+        "system/memory/libion/kernel-headers",
+    ],
+    shared_libs: [
+        "libgralloccore",
+        "libgrallocutils",
+        "libqdMetaData",
+        "libsync",
+        "android.hardware.graphics.mapper@2.0",
+        "android.hardware.graphics.mapper@2.1",
+        "android.hardware.graphics.mapper@3.0",
+        "android.hardware.graphics.mapper@4.0",
+    ],
+    cflags: [
+        "-DLOG_TAG=\"qdgralloc\"",
+        "-D__QTI_DISPLAY_GRALLOC__",
+    ],
+    srcs: [
+        "gr_device_impl.cpp",
+    ],
+}
+
 //mapper3
 cc_library_shared {
     name: "android.hardware.graphics.mapper@3.0-impl-qti-display",
